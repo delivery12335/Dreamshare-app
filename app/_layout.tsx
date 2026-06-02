@@ -81,6 +81,7 @@ export default function RootLayout() {
             <AuthGuard>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
+                <Stack.Screen name="onboarding" />
                 <Stack.Screen name="login" />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="dreams/[id]" />

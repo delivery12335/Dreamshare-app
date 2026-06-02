@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { YStack, XStack, H1, H4, Paragraph, Button, Input, SafeArea, Circle, Spinner, toast, useBlinkToast } from '@blinkdotnew/mobile-ui';
-import { Mic, X, Send, Sparkles, Moon } from '@blinkdotnew/mobile-ui';
+import { YStack, XStack, H1, H4, Paragraph, Button, Input, SafeArea, Circle, Spinner, toast } from '@blinkdotnew/mobile-ui';
+import { Mic, X, Send, Sparkles } from '@blinkdotnew/mobile-ui';
 import { useRouter } from 'expo-router';
 import { blink } from '@/lib/blink';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
+import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
 
 export default function RecordScreen() {
   const [content, setContent] = useState('');
@@ -14,6 +16,12 @@ export default function RecordScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const recordingRef = useRef<Audio.Recording | null>(null);
+
+  const triggerHaptic = (style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(style);
+    }
+  };
 
   const startRecording = async () => {
     try {
@@ -24,6 +32,8 @@ export default function RecordScreen() {
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
+
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
 
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
@@ -38,6 +48,7 @@ export default function RecordScreen() {
   const stopRecording = async () => {
     try {
       setIsRecording(false);
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
       await recordingRef.current?.stopAndUnloadAsync();
       const uri = recordingRef.current?.getURI();
       if (uri) {
@@ -52,6 +63,7 @@ export default function RecordScreen() {
         });
         setContent(prev => prev + ' ' + text);
         setIsAnalyzing(false);
+        triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
       }
     } catch (err) {
       console.error('Failed to stop recording', err);
@@ -62,6 +74,7 @@ export default function RecordScreen() {
   const analyzeMutation = useMutation({
     mutationFn: async (dreamContent: string) => {
       setIsAnalyzing(true);
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
       
       // 1. Analyze with AI
       const { object: analysis } = await blink.ai.generateObject({
@@ -99,6 +112,7 @@ export default function RecordScreen() {
       queryClient.invalidateQueries({ queryKey: ['dreams'] });
       queryClient.invalidateQueries({ queryKey: ['recentDreams'] });
       setIsAnalyzing(false);
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
       router.replace(`/dreams/${dream.id}`);
       toast('Dream Analyzed!', { message: 'Your subconscious has been interpreted.', variant: 'success' });
     },
